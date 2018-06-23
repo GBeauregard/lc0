@@ -18,6 +18,7 @@
 #include "neural/cache.h"
 #include <cassert>
 #include <iostream>
+#include <sstream>
 
 namespace lczero {
 CachingComputation::CachingComputation(
@@ -42,6 +43,15 @@ bool CachingComputation::AddInputByHash(uint64_t hash) {
 void CachingComputation::AddInput(
     uint64_t hash, InputPlanes&& input,
     std::vector<uint16_t>&& probabilities_to_cache) {
+  {
+    std::ostringstream oss;
+    oss << hash;
+    for (const auto& x : probabilities_to_cache) oss << ' ' << x;
+    oss << '\n';
+    static std::mutex m;
+    std::lock_guard<std::mutex> l(m);
+    std::cerr << oss.str();
+  }
   if (AddInputByHash(hash)) return;
   batch_.emplace_back();
   batch_.back().hash = hash;
@@ -94,6 +104,13 @@ float CachingComputation::GetPVal(int sample, int move_id) const {
     if (item.last_idx == moves.size()) item.last_idx = 0;
     if (move.first == move_id) return move.second;
     ++total_count;
+  }
+  {
+    std::ostringstream oss;
+    oss << '@' << item.hash;
+    for (int i = 0; i < moves.size(); ++i) oss << ' ' << moves[i].first;
+    oss << ' ' << move_id << '\n';
+    std::cerr << oss.str();
   }
   assert(false);  // Move not found.
   return 0;
